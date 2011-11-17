@@ -42,6 +42,7 @@
 /* This is the charset used to display the graphs, but multiple rows are used
  * to increase the resolution. */
 char charset[] = "_-`";
+char charset_fill[] = "_o#";
 int charset_len = sizeof(charset)-1;
 
 /* Global config */
@@ -51,6 +52,7 @@ int opt_columns = -1; /* -1 means auto-detect number of columns. */
 int opt_rows = 2;     /* Number of rows to use to increase resolution. */
 int opt_label_margin_top = 1; /* Spaces before labels. */
 int opt_log = 0; /* Logarithmic mode */
+int opt_fill = 0; /* Fill the area under the sparkline */
 
 /* ----------------------------------------------------------------------------
  * Sequences
@@ -134,6 +136,41 @@ struct sequence *argument_to_sequence(const char *arg) {
 }
 
 /* ----------------------------------------------------------------------------
+ * File frequency mode
+ * ------------------------------------------------------------------------- */
+
+/* Read chars from stdin until end of file, build a frequency table, and
+ * finally translate it into samples. */
+struct sequence *file_freq_to_sequence(void) {
+    struct sequence *seq;
+    unsigned int count[256];
+    int c;
+
+    memset(count,0,sizeof(count));
+    while((c = getc(stdin)) != EOF) {
+        if (opt_mode == ASPARK_MODE_TXTFREQ) c = toupper(c);
+        count[c]++;
+    }
+    seq = create_sequence();
+    if (opt_mode == ASPARK_MODE_BINFREQ) {
+        for (c = 0; c < 256; c++) {
+            char buf[32];
+
+            snprintf(buf,sizeof(buf),"%d",c);
+            sequence_add_sample(seq,count[c],strdup(buf));
+        }
+    } else {
+        for (c = ' '+1; c <= 'Z'; c++) {
+            char buf[2];
+
+            snprintf(buf,sizeof(buf),"%c",c);
+            sequence_add_sample(seq,count[c],strdup(buf));
+        }
+    }
+    return seq;
+}
+
+/* ----------------------------------------------------------------------------
  * ASCII rendering of sequence
  * ------------------------------------------------------------------------- */
 
@@ -166,7 +203,10 @@ void render_sub_sequence(struct sequence *seq, int rows, int offset, int len)
                 int charidx = step-((rows-row-1)*charset_len);
                 loop = 1;
                 if (charidx >= 0 && charidx < charset_len) {
-                    chars[j] = charset[charidx];
+                    chars[j] = opt_fill ? charset_fill[charidx] :
+                                          charset[charidx];
+                } else if(opt_fill && charidx >= charset_len) {
+                    chars[j] = '|';
                 }
             } else {
                 /* Labels spacing */
@@ -230,6 +270,8 @@ void parse_args(int argc, char **argv) {
             opt_mode = ASPARK_MODE_STREAM;
         } else if (!strcasecmp(argv[j],"--log")) {
             opt_log = 1;
+        } else if (!strcasecmp(argv[j],"--fill")) {
+            opt_fill = 1;
         } else if (!strcasecmp(argv[j],"--columns") && !lastarg) {
             opt_columns = atoi(argv[++j]);
         } else if (!strcasecmp(argv[j],"--rows") && !lastarg) {
@@ -276,30 +318,7 @@ struct sequence *read_sequence(void) {
     } else if (opt_mode == ASPARK_MODE_BINFREQ ||
                opt_mode == ASPARK_MODE_TXTFREQ)
     {
-        unsigned int count[256];
-        int c;
-
-        memset(count,0,sizeof(count));
-        while((c = getc(stdin)) != EOF) {
-            if (opt_mode == ASPARK_MODE_TXTFREQ) c = toupper(c);
-            count[c]++;
-        }
-        seq = create_sequence();
-        if (opt_mode == ASPARK_MODE_BINFREQ) {
-            for (c = 0; c < 256; c++) {
-                char buf[32];
-
-                snprintf(buf,sizeof(buf),"%d",c);
-                sequence_add_sample(seq,count[c],strdup(buf));
-            }
-        } else {
-            for (c = ' '+1; c <= 'Z'; c++) {
-                char buf[2];
-
-                snprintf(buf,sizeof(buf),"%c",c);
-                sequence_add_sample(seq,count[c],strdup(buf));
-            }
-        }
+        seq = file_freq_to_sequence();
     }
     return seq;
 }

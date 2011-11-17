@@ -5,7 +5,7 @@ aspark is a C program to display ASCII Sparklines.
 It is completely useless in 2011.
 
 It is a bloated versions of https://github.com/holman/spark
-and is intended for the Enterprise Companies.
+and is intended for Enterprise Companies.
 
 Basic usage
 ---

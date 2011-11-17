@@ -292,6 +292,7 @@ void render_sequence(struct sequence *seq, int columns, int rows) {
     for (j = 0; j < seq->length; j += columns) {
         int sublen = (seq->length-j) < columns ? (seq->length-j) : columns;
 
+        if (j != 0) printf("\n");
         render_sub_sequence(seq, rows, j, sublen);
     }
 }
@@ -302,7 +303,42 @@ void render_sequence(struct sequence *seq, int columns, int rows) {
 
 /* Show help and exit */
 void show_help(void) {
-    printf("Usage: spark [options] [comma separated values]\n");
+    /* We use multiple printf to have strings less than 512 bytes in size
+     * to conform to C99 minimal requirements for C compilers. */
+    printf(
+"Usage: aspark [options] [comma separated values]\n"
+"\n"
+"  --help             show this help\n"
+"  --stream           get data from stdin, one line per sample\n"
+"  --binfreq          show binary frequency table (data read from stdin)\n"
+"  --txtfreq          show letters frequency table (data read from stdin)\n");
+    printf(
+"  --log              use logarithmic scale\n"
+"  --fill             fill the space below the spark line\n"
+"  --columns <cols>   use at max <cols> columns. By default uses $COLUMNS\n"
+"  --rows <rows>      use <rows> rows to render the graph (default is 2)\n"
+"  --label-margin-top <margin> vertical spaces between the line and labels\n"
+"\n");
+    printf(
+"If no --stream, --binfreq or --txtfreq option is specified data is read\n"
+"from the argument, example:\n\n"
+"   $ aspark 1,2,3,4,3,1\n\n"
+"It is possible to specify a label using <value>:<label>, for instance:\n\n"
+"   $ aspark 1:one,2,3,4:peak,3,1\n\n");
+    printf(
+"When stream mode is enabled using --stream data is read from standard\n"
+"input, one value per line. In this mode labels are specified usigng lines\n"
+"containing the value, any number of spaces, and the label.\n\n"
+"Examples:\n");
+    printf(
+"   $ aspark 1,2,3,4,10 --rows 4 --fill\n"
+"   $ aspark --log 1,2,100 (data argument can be in any position)\n"
+"   $ aspark --log 1,2,100 (data argument can be in any position)\n"
+"   $ cat /etc/passwd | awk {'print length($0)'} | \\\n"
+"        aspark --stream --fill --rows 5\n"
+"   $ cat /bin/ls | aspark --binfreq --log --rows 6\n\n"
+"aspark source code is available at http://github.com/antirez/aspark\n"
+    );
     exit(0);
 }
 

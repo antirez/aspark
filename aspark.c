@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <ctype.h>
 
 #define ASPARK_MODE_ARGUMENT 0   /* read data sequence from arguments */
 #define ASPARK_MODE_STREAM   1   /* read sequence of data from standard input */
@@ -267,6 +268,33 @@ struct sequence *read_sequence(void) {
         if (!seq) {
             fprintf(stderr,"Bad data format: '%s'\n", opt_data);
             exit(1);
+        }
+    } else if (opt_mode == ASPARK_MODE_BINFREQ ||
+               opt_mode == ASPARK_MODE_TXTFREQ)
+    {
+        unsigned int count[256];
+        int c;
+
+        memset(count,0,sizeof(count));
+        while((c = getc(stdin)) != EOF) {
+            if (opt_mode == ASPARK_MODE_TXTFREQ) c = toupper(c);
+            count[c]++;
+        }
+        seq = create_sequence();
+        if (opt_mode == ASPARK_MODE_BINFREQ) {
+            for (c = 0; c < 256; c++) {
+                char buf[32];
+
+                snprintf(buf,sizeof(buf),"%d",c);
+                sequence_add_sample(seq,count[c],strdup(buf));
+            }
+        } else {
+            for (c = ' '+1; c <= 'Z'; c++) {
+                char buf[2];
+
+                snprintf(buf,sizeof(buf),"%c",c);
+                sequence_add_sample(seq,count[c],strdup(buf));
+            }
         }
     }
     return seq;

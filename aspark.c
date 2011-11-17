@@ -81,7 +81,6 @@ struct sequence *create_sequence(void) {
 
 /* Add a new sample into a sequence */
 void sequence_add_sample(struct sequence *seq, double value, char *label) {
-    if (opt_log) value = log(value+1);
     if (seq->length == 0) {
         seq->min = seq->max = value;
     } else {
@@ -231,15 +230,22 @@ void render_sub_sequence(struct sequence *seq, int rows, int offset, int len)
     char *chars = malloc(len);
     int loop = 1;
 
-    if (relmax == 0) relmax = 1;
+    if (opt_log) {
+        relmax = log(relmax+1);
+    } else if (relmax == 0) {
+        relmax = 1;
+    }
+
     while(loop) {
         loop = 0;
         memset(chars,' ',len);
         for (j = 0; j < len; j++) {
             struct sample *s = &seq->samples[j+offset];
             double relval = s->value - seq->min;
+            int step;
 
-            int step = (int) (relval*steps)/relmax;
+            if (opt_log) relval = log(relval+1);
+            step = (int) (relval*steps)/relmax;
             if (step < 0) step = 0;
             if (step >= steps) step = steps-1;
 
@@ -279,6 +285,7 @@ void render_sub_sequence(struct sequence *seq, int rows, int offset, int len)
     free(chars);
 }
 
+/* Turn a sequence into its ASCII representation */
 void render_sequence(struct sequence *seq, int columns, int rows) {
     int j;
 

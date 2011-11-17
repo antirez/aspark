@@ -50,6 +50,7 @@ int opt_mode = ASPARK_MODE_ARGUMENT;
 int opt_columns = -1; /* -1 means auto-detect number of columns. */
 int opt_rows = 2;     /* Number of rows to use to increase resolution. */
 int opt_label_margin_top = 1; /* Spaces before labels. */
+int opt_log = 0; /* Logarithmic mode */
 
 /* ----------------------------------------------------------------------------
  * Sequences
@@ -78,6 +79,7 @@ struct sequence *create_sequence(void) {
 
 /* Add a new sample into a sequence */
 void sequence_add_sample(struct sequence *seq, double value, char *label) {
+    if (opt_log) value = log(value+1);
     if (seq->length == 0) {
         seq->min = seq->max = value;
     } else {
@@ -226,6 +228,8 @@ void parse_args(int argc, char **argv) {
             opt_mode = ASPARK_MODE_TXTFREQ;
         } else if (!strcasecmp(argv[j],"--stream")) {
             opt_mode = ASPARK_MODE_STREAM;
+        } else if (!strcasecmp(argv[j],"--log")) {
+            opt_log = 1;
         } else if (!strcasecmp(argv[j],"--columns") && !lastarg) {
             opt_columns = atoi(argv[++j]);
         } else if (!strcasecmp(argv[j],"--rows") && !lastarg) {

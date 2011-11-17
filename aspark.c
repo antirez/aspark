@@ -171,6 +171,51 @@ struct sequence *file_freq_to_sequence(void) {
 }
 
 /* ----------------------------------------------------------------------------
+ * File stream mode
+ * ------------------------------------------------------------------------- */
+
+/* Reads data line after line from a standard input, where every line
+ * represents a single data point that can be a number or optionally
+ * a number, any number of spaces, and a label, and returns the sequence
+ * represented by this stream.
+ *
+ * The function is very tolerant about spaces and badly formatted lines. */
+struct sequence *datastream_to_sequence(void) {
+    struct sequence *seq = create_sequence();
+    char buf[4096];
+
+    while(fgets(buf,sizeof(buf),stdin) != NULL) {
+        char *endptr, *start, *label = NULL, *p = buf;
+        double value;
+
+        /* Skip initial spaces */
+        while(*p && isspace(*p)) p++;
+        if (*p == '\0') continue; /* Empty line, skip it */
+        start = p;
+        /* Find the end of the value */
+        while(*p && !isspace(*p)) p++;
+        if (*p) {
+            *p = '\0';
+            p++;
+        }
+        /* Parse the value */
+        errno = 0;
+        value = strtod(start,&endptr);
+        if (*endptr != '\0' || errno != 0) continue; /* Bad float, skip it */
+        /* Find the start of the label */
+        while(*p && isspace(*p)) p++;
+        if (*p != '\0') {
+            /* We have an additional label, find the end */
+            label = p;
+            while(*p && !isspace(*p)) p++;
+            *p = '\0';
+        }
+        sequence_add_sample(seq,value,label ? strdup(label) : NULL);
+    }
+    return seq;
+}
+
+/* ----------------------------------------------------------------------------
  * ASCII rendering of sequence
  * ------------------------------------------------------------------------- */
 
@@ -319,6 +364,8 @@ struct sequence *read_sequence(void) {
                opt_mode == ASPARK_MODE_TXTFREQ)
     {
         seq = file_freq_to_sequence();
+    } else if (opt_mode == ASPARK_MODE_STREAM) {
+        seq = datastream_to_sequence();
     }
     return seq;
 }
